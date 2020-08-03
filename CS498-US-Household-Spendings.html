@@ -19,15 +19,15 @@
             <h2>House Spendings by Catagory - Income Group:
                 <span id="income-group-title"></span>
             </h2>
-            <div id="spending-graph0" style="width: 800px; height: 500px; display: none;"></div>
-            <div id="spending-graph1" style="width: 800px; height: 500px; display: none;"></div>
-            <div id="spending-graph2" style="width: 800px; height: 500px; display: none;"></div>
-            <div id="spending-graph3" style="width: 800px; height: 500px; display: none;"></div>
-            <div id="spending-graph4" style="width: 800px; height: 500px; display: none;"></div>
-            <div id="spending-graph5" style="width: 800px; height: 500px; display: none;"></div>
-            <div id="spending-graph6" style="width: 800px; height: 500px; display: none;"></div>
-            <div id="spending-graph7" style="width: 800px; height: 500px; display: none;"></div>
-            <div id="spending-graph8" style="width: 800px; height: 500px; display: none;"></div>
+            <div id="spending-graph0" style="width: 1200px; height: 1000px; display: none;"></div>
+            <div id="spending-graph1" style="width: 1200px; height: 1000px; display: none;"></div>
+            <div id="spending-graph2" style="width: 1200px; height: 1000px; display: none;"></div>
+            <div id="spending-graph3" style="width: 1200px; height: 1000px; display: none;"></div>
+            <div id="spending-graph4" style="width: 1200px; height: 1000px; display: none;"></div>
+            <div id="spending-graph5" style="width: 1200px; height: 1000px; display: none;"></div>
+            <div id="spending-graph6" style="width: 1200px; height: 1000px; display: none;"></div>
+            <div id="spending-graph7" style="width: 1200px; height: 1000px; display: none;"></div>
+            <div id="spending-graph8" style="width: 1200px; height: 1000px; display: none;"></div>
         </div>
         <div style="margin-top: 20px;">References:</div>
         <ul>
@@ -135,7 +135,7 @@
                     });
             }
             async function init() {
-                const data = await d3.csv("https://raw.githubusercontent.com/ChengJoyceJi/ChengJoyceJi.github.io/master/data/income-distribution.csv");
+                const data = await d3.csv("https://raw.githubusercontent.com/ChengJoyceJi/ChengJoyceJi.github.io/master/dv-data/income-distribution.csv");
                 const dataDict = data.reduce(function(map, obj) {
                     map[obj["Income"]] = obj["Number of people (in thousands)"];
                     return map;
@@ -150,7 +150,7 @@
             export default function define(runtime, observer) {
                 const main = runtime.module();
                 const fileAttachments = new Map([
-                    ["spending0.csv", "https://raw.githubusercontent.com/ChengJoyceJi/ChengJoyceJi.github.io/master/data/spending0.csv"],
+                    ["spending0.csv", "https://raw.githubusercontent.com/ChengJoyceJi/ChengJoyceJi.github.io/master/dv-data/spending0.csv"],
                 ]);
                 main.builtin("FileAttachment", runtime.fileAttachments(name => fileAttachments.get(name)));
                 main.variable(observer()).define(["md"], function(md) {
@@ -288,7 +288,7 @@
             export default function define(runtime, observer) {
                 const main = runtime.module();
                 const fileAttachments = new Map([
-                    ["spending1.csv", "https://raw.githubusercontent.com/ChengJoyceJi/ChengJoyceJi.github.io/master/data/spending1.csv"],
+                    ["spending1.csv", "https://raw.githubusercontent.com/ChengJoyceJi/ChengJoyceJi.github.io/master/dv-data/spending1.csv"],
                 ]);
                 main.builtin("FileAttachment", runtime.fileAttachments(name => fileAttachments.get(name)));
                 main.variable(observer()).define(["md"], function(md) {
@@ -426,7 +426,7 @@
             export default function define(runtime, observer) {
                 const main = runtime.module();
                 const fileAttachments = new Map([
-                    ["spending2.csv", "https://raw.githubusercontent.com/ChengJoyceJi/ChengJoyceJi.github.io/master/data/spending2.csv"],
+                    ["spending2.csv", "https://raw.githubusercontent.com/ChengJoyceJi/ChengJoyceJi.github.io/master/dv-data/spending2.csv"],
                 ]);
                 main.builtin("FileAttachment", runtime.fileAttachments(name => fileAttachments.get(name)));
                 main.variable(observer()).define(["md"], function(md) {
@@ -564,7 +564,7 @@
             export default function define(runtime, observer) {
                 const main = runtime.module();
                 const fileAttachments = new Map([
-                    ["spending3.csv", "https://raw.githubusercontent.com/ChengJoyceJi/ChengJoyceJi.github.io/master/data/spending3.csv"],
+                    ["spending3.csv", "https://raw.githubusercontent.com/ChengJoyceJi/ChengJoyceJi.github.io/master/dv-data/spending3.csv"],
                 ]);
                 main.builtin("FileAttachment", runtime.fileAttachments(name => fileAttachments.get(name)));
                 main.variable(observer()).define(["md"], function(md) {
@@ -702,7 +702,7 @@
             export default function define(runtime, observer) {
                 const main = runtime.module();
                 const fileAttachments = new Map([
-                    ["spending4.csv", "https://raw.githubusercontent.com/ChengJoyceJi/ChengJoyceJi.github.io/master/data/spending4.csv"],
+                    ["spending4.csv", "https://raw.githubusercontent.com/ChengJoyceJi/ChengJoyceJi.github.io/master/dv-data/spending4.csv"],
                 ]);
                 main.builtin("FileAttachment", runtime.fileAttachments(name => fileAttachments.get(name)));
                 main.variable(observer()).define(["md"], function(md) {
@@ -840,7 +840,7 @@
             export default function define(runtime, observer) {
                 const main = runtime.module();
                 const fileAttachments = new Map([
-                    ["spending5.csv", "https://raw.githubusercontent.com/ChengJoyceJi/ChengJoyceJi.github.io/master/data/spending5.csv"],
+                    ["spending5.csv", "https://raw.githubusercontent.com/ChengJoyceJi/ChengJoyceJi.github.io/master/dv-data/spending5.csv"],
                 ]);
                 main.builtin("FileAttachment", runtime.fileAttachments(name => fileAttachments.get(name)));
                 main.variable(observer()).define(["md"], function(md) {
@@ -978,7 +978,7 @@
             export default function define(runtime, observer) {
                 const main = runtime.module();
                 const fileAttachments = new Map([
-                    ["spending6.csv", "https://raw.githubusercontent.com/ChengJoyceJi/ChengJoyceJi.github.io/master/data/spending6.csv"],
+                    ["spending6.csv", "https://raw.githubusercontent.com/ChengJoyceJi/ChengJoyceJi.github.io/master/dv-data/spending6.csv"],
                 ]);
                 main.builtin("FileAttachment", runtime.fileAttachments(name => fileAttachments.get(name)));
                 main.variable(observer()).define(["md"], function(md) {
@@ -1116,7 +1116,7 @@
             export default function define(runtime, observer) {
                 const main = runtime.module();
                 const fileAttachments = new Map([
-                    ["spending7.csv", "https://raw.githubusercontent.com/ChengJoyceJi/ChengJoyceJi.github.io/master/data/spending7.csv"],
+                    ["spending7.csv", "https://raw.githubusercontent.com/ChengJoyceJi/ChengJoyceJi.github.io/master/dv-data/spending7.csv"],
                 ]);
                 main.builtin("FileAttachment", runtime.fileAttachments(name => fileAttachments.get(name)));
                 main.variable(observer()).define(["md"], function(md) {
@@ -1254,7 +1254,7 @@
             export default function define(runtime, observer) {
                 const main = runtime.module();
                 const fileAttachments = new Map([
-                    ["spending8.csv", "https://raw.githubusercontent.com/ChengJoyceJi/ChengJoyceJi.github.io/master/data/spending8.csv"],
+                    ["spending8.csv", "https://raw.githubusercontent.com/ChengJoyceJi/ChengJoyceJi.github.io/master/dv-data/spending8.csv"],
                 ]);
                 main.builtin("FileAttachment", runtime.fileAttachments(name => fileAttachments.get(name)));
                 main.variable(observer()).define(["md"], function(md) {
