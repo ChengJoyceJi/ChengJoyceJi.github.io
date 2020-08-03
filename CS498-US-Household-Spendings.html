@@ -1,0 +1,1390 @@
+<!DOCTYPE HTML>
+<!--
+	Spectral by HTML5 UP
+	html5up.net | @n33co
+	Free for personal and commercial use under the CCA 3.0 license (html5up.net/license)
+-->
+<html>
+	<head>
+		<title>CS498: Create a Narrative Visualization</title>
+		<meta charset="utf-8" />
+    </head>
+    <script src="https://d3js.org/d3.v5.min.js"></script>
+    <script src="https://d3js.org/d3-scale-chromatic.v1.min.js"></script>
+    <body onload="init()">
+        <h2>US household income distribution (2018)</h2>
+        <p><b>Click on pie chart slices to view household spending details.</b></p>
+        <svg id="income-groups" width=700 height=400></svg>
+        <div id="spending-container">
+            <h2>House Spendings by Catagory - Income Group:
+                <span id="income-group-title"></span>
+            </h2>
+            <div id="spending-graph0" style="width: 800px; height: 500px; display: none;"></div>
+            <div id="spending-graph1" style="width: 800px; height: 500px; display: none;"></div>
+            <div id="spending-graph2" style="width: 800px; height: 500px; display: none;"></div>
+            <div id="spending-graph3" style="width: 800px; height: 500px; display: none;"></div>
+            <div id="spending-graph4" style="width: 800px; height: 500px; display: none;"></div>
+            <div id="spending-graph5" style="width: 800px; height: 500px; display: none;"></div>
+            <div id="spending-graph6" style="width: 800px; height: 500px; display: none;"></div>
+            <div id="spending-graph7" style="width: 800px; height: 500px; display: none;"></div>
+            <div id="spending-graph8" style="width: 800px; height: 500px; display: none;"></div>
+        </div>
+        <div style="margin-top: 20px;">References:</div>
+        <ul>
+            <li>Data source: https://www.bls.gov/cex/tables.htm#midyear</li>
+            <li>D3: https://github.com/d3/d3</li>
+            <li>Parallel sets library: https://observablehq.com/@d3/parallel-sets</li>
+            <li>Parallel sets API: https://api.observablehq.com/@d3/parallel-sets.js?v=3</li>
+            <li>Pie chart with labels: https://www.d3-graph-gallery.com/graph/donut_label.html</li>
+        </li>
+        <script>
+            function draw_piechart(dataDict) {
+                const pie = d3.pie()
+                    .sort(null) // Do not sort group by size
+                    .value(function(d) {return d.value; })
+                
+                const data = pie(d3.entries(dataDict))
+                const radius = 200;
+                const color = d3.scaleOrdinal()
+                    .domain([Object.keys(dataDict)])
+                    .range(d3.schemePaired);
+
+                var arc = d3.arc()
+                    .innerRadius(0)
+                    .outerRadius(radius * 0.8)
+
+                var outerArc = d3.arc()
+                    .innerRadius(radius * 0.9)
+                    .outerRadius(radius * 0.9)
+
+                const svg = d3.select("svg#income-groups")
+                    .append("g")
+                    .attr("transform", "translate(350, 200)");
+
+                svg.selectAll('allSlices')
+                    .data(data)
+                    .enter()
+                    .append('path')
+                    .attr('d', arc)
+                    .attr('fill', function(d){ return(color(d.data.key)) })
+                    .attr("stroke", "white")
+                    .style("stroke-width", "2px")
+                    .style("opacity", 0.7)
+
+                svg.selectAll('allPolylines')
+                    .data(data)
+                    .enter()
+                    .append('polyline')
+                        .attr("stroke", "black")
+                        .style("fill", "none")
+                        .attr("stroke-width", 1)
+                        .attr('points', function(d) {
+                        var posA = arc.centroid(d) // line insertion in the slice
+                        var posB = outerArc.centroid(d) // line break: we use the other arc generator that has been built only for that
+                        var posC = outerArc.centroid(d); // Label position = almost the same as posB
+                        var midangle = d.startAngle + (d.endAngle - d.startAngle) / 2 // we need the angle to see if the X position will be at the extreme right or extreme left
+                        posC[0] = radius * 0.95 * (midangle < Math.PI ? 1 : -1); // multiply by 1 or -1 to put it on the right or on the left
+                        return [posA, posB, posC]
+                        })
+
+                svg.selectAll('allLabels')
+                    .data(data)
+                    .enter()
+                    .append('text')
+                        .text( function(d) { console.log(d.data.key) ; return d.data.key } )
+                        .attr('transform', function(d) {
+                            var pos = outerArc.centroid(d);
+                            var midangle = d.startAngle + (d.endAngle - d.startAngle) / 2
+                            pos[0] = radius * 0.99 * (midangle < Math.PI ? 1 : -1);
+                            return 'translate(' + pos + ')';
+                        })
+                        .style('text-anchor', function(d) {
+                            var midangle = d.startAngle + (d.endAngle - d.startAngle) / 2
+                            return (midangle < Math.PI ? 'start' : 'end')
+                        })
+
+                var tooltip = d3.select("body")
+                    .append("div")
+                    .style("position", "absolute")
+                    .style("z-index", "10")
+                    .style("visibility", "hidden")
+                    .text("a simple tooltip");
+
+                svg.selectAll("path")
+                    .on("click", function(d) {
+                        document.getElementById("spending-graph" + d.index.toString())
+                            .style.display = "block";
+                        for (var i = 0; i < 9; i++) {
+                            if (i != d.index) {
+                                document.getElementById("spending-graph" + i.toString())
+                                    .style.display = "none";
+                            }
+                        }
+                        document.getElementById("income-group-title").innerHTML = d.data.key;
+                        console.log(d.index);
+                    })
+                    .on("mouseover", function(d) {
+                        tooltip.text("Number of units (in thousands): " + d.value);
+                        return tooltip.style("visibility", "visible");
+                    })
+                    .on("mousemove", function() {
+                        return tooltip.style("top", (d3.event.pageY-10)+"px").style("left",(d3.event.pageX+10)+"px");
+                    })
+                    .on("mouseout", function() {
+                        return tooltip.style("visibility", "hidden");
+                    });
+            }
+            async function init() {
+                const data = await d3.csv("https://raw.githubusercontent.com/ChengJoyceJi/ChengJoyceJi.github.io/master/data/income-distribution.csv");
+                const dataDict = data.reduce(function(map, obj) {
+                    map[obj["Income"]] = obj["Number of people (in thousands)"];
+                    return map;
+                }, {});
+                draw_piechart(dataDict);
+            }
+        </script>
+        
+        <script type="module">
+            import {Runtime, Inspector} from "https://cdn.jsdelivr.net/npm/@observablehq/runtime@4/dist/runtime.js";
+            // https://observablehq.com/@d3/parallel-sets@244
+            export default function define(runtime, observer) {
+                const main = runtime.module();
+                const fileAttachments = new Map([
+                    ["spending0.csv", "https://raw.githubusercontent.com/ChengJoyceJi/ChengJoyceJi.github.io/master/data/spending0.csv"],
+                ]);
+                main.builtin("FileAttachment", runtime.fileAttachments(name => fileAttachments.get(name)));
+                main.variable(observer()).define(["md"], function(md) {
+                    return(md`# Parallel Sets
+
+                    [Parallel sets](https://kosara.net/publications/Bendix_InfoVis_2005.html) are like [parallel coordinates](/@d3/parallel-coordinates), but for categorical dimensions.
+                    The thickness of each curved line represents a quantity that is repeatedly subdivided by category.`
+                )});
+                main.variable(observer("chart"))
+                    .define("chart", ["d3","width","height","sankey","graph","color"],
+                        function(d3,width,height,sankey,graph,color){
+                    const svg = d3.create("svg")
+                        .attr("viewBox", [0, 0, width, height]);
+
+                    const {nodes, links} = sankey({
+                        nodes: graph.nodes.map(d => Object.assign({}, d)),
+                        links: graph.links.map(d => Object.assign({}, d))
+                });
+
+                svg.append("g")
+                    .selectAll("rect")
+                    .data(nodes)
+                    .join("rect")
+                    .attr("x", d => d.x0)
+                    .attr("y", d => d.y0)
+                    .attr("height", d => d.y1 - d.y0)
+                    .attr("width", d => d.x1 - d.x0)
+                    .append("title")
+                    .text(d => `${d.name}\n${d.value.toLocaleString()}`);
+
+                svg.append("g")
+                    .attr("fill", "none")
+                    .selectAll("g")
+                    .data(links)
+                    .join("path")
+                    .attr("d", d3.sankeyLinkHorizontal())
+                    .attr("stroke", d => color(d.names[0]))
+                    .attr("stroke-width", d => d.width)
+                    .style("mix-blend-mode", "multiply")
+                    .append("title")
+                    .text(d => `${d.names.join(" → ")}\n${d.value.toLocaleString()}`);
+
+                svg.append("g")
+                    .style("font", "12px sans-serif")
+                    .selectAll("text")
+                    .data(nodes)
+                    .join("text")
+                    .attr("x", d => d.x0 < width / 2 ? d.x1 + 6 : d.x0 - 6)
+                    .attr("y", d => (d.y1 + d.y0) / 2)
+                    .attr("dy", "0.35em")
+                    .attr("text-anchor", d => d.x0 < width / 2 ? "start" : "end")
+                    .text(d => d.name)
+                    .append("tspan")
+                    .attr("fill-opacity", 0.7)
+                    .text(d => ` ${d.value.toLocaleString()}`);
+
+                return svg.node();
+                });
+                main.variable(observer("width")).define("width", function() {
+                    return 975;
+                });
+                main.variable(observer("height")).define("height", function() {
+                    return 720;
+                });
+                main.variable(observer("sankey")).define("sankey", ["d3","width","height"], function(d3,width,height){
+                    return d3.sankey()
+                        .nodeSort(null)
+                        .linkSort(null)
+                        .nodeWidth(4)
+                        .nodePadding(20)
+                        .extent([[0, 5], [width, height - 5]])
+                });
+                main.variable(observer("graph")).define("graph", ["keys","data"], function(keys,data) {
+                    let index = -1;
+                    const nodes = [];
+                    const nodeByKey = new Map;
+                    const indexByKey = new Map;
+                    const links = [];
+
+                    for (const k of keys) {
+                        for (const d of data) {
+                        const key = JSON.stringify([k, d[k]]);
+                        if (nodeByKey.has(key)) continue;
+                        const node = {name: d[k]};
+                        nodes.push(node);
+                        nodeByKey.set(key, node);
+                        indexByKey.set(key, ++index);
+                        }
+                    }
+
+                    for (let i = 1; i < keys.length; ++i) {
+                        const a = keys[i - 1];
+                        const b = keys[i];
+                        const prefix = keys.slice(0, i + 1);
+                        const linkByKey = new Map;
+                        for (const d of data) {
+                        const names = prefix.map(k => d[k]);
+                        const key = JSON.stringify(names);
+                        const value = d.value || 1;
+                        let link = linkByKey.get(key);
+                        if (link) { link.value += value; continue; }
+                        link = {
+                            source: indexByKey.get(JSON.stringify([a, d[a]])),
+                            target: indexByKey.get(JSON.stringify([b, d[b]])),
+                            names,
+                            value
+                        };
+                        links.push(link);
+                        linkByKey.set(key, link);
+                        }
+                    }
+
+                    return {nodes, links};
+                });
+                main.variable(observer("color")).define("color", ["d3"], function(d3) {
+                    return d3.scaleOrdinal(["Perished"], ["#da4f81"]).unknown("#ccc");
+                });
+                main.variable(observer("keys")).define("keys", ["data"], function(data) {
+                    return data.columns.slice(0, -1);
+                });
+                main.variable(observer("data")).define("data", ["d3","FileAttachment"], async function(d3,FileAttachment) {
+                    return d3.csvParse(await FileAttachment("spending0.csv").text(), d3.autoType);
+                });
+                main.variable(observer("d3")).define("d3", ["require"], function(require) {
+                    return require("d3@5", "d3-sankey@0.12");
+                });
+                return main;
+            }
+            const inspect = Inspector.into("#spending-graph0");
+            (new Runtime).module(define, name => name === "chart" ? inspect() : undefined);
+        </script>
+        <script type="module">
+            import {Runtime, Inspector} from "https://cdn.jsdelivr.net/npm/@observablehq/runtime@4/dist/runtime.js";
+            // https://observablehq.com/@d3/parallel-sets@244
+            export default function define(runtime, observer) {
+                const main = runtime.module();
+                const fileAttachments = new Map([
+                    ["spending1.csv", "https://raw.githubusercontent.com/ChengJoyceJi/ChengJoyceJi.github.io/master/data/spending1.csv"],
+                ]);
+                main.builtin("FileAttachment", runtime.fileAttachments(name => fileAttachments.get(name)));
+                main.variable(observer()).define(["md"], function(md) {
+                    return(md`# Parallel Sets
+
+                    [Parallel sets](https://kosara.net/publications/Bendix_InfoVis_2005.html) are like [parallel coordinates](/@d3/parallel-coordinates), but for categorical dimensions.
+                    The thickness of each curved line represents a quantity that is repeatedly subdivided by category.`
+                )});
+                main.variable(observer("chart"))
+                    .define("chart", ["d3","width","height","sankey","graph","color"],
+                        function(d3,width,height,sankey,graph,color){
+                    const svg = d3.create("svg")
+                        .attr("viewBox", [0, 0, width, height]);
+
+                    const {nodes, links} = sankey({
+                        nodes: graph.nodes.map(d => Object.assign({}, d)),
+                        links: graph.links.map(d => Object.assign({}, d))
+                });
+
+                svg.append("g")
+                    .selectAll("rect")
+                    .data(nodes)
+                    .join("rect")
+                    .attr("x", d => d.x0)
+                    .attr("y", d => d.y0)
+                    .attr("height", d => d.y1 - d.y0)
+                    .attr("width", d => d.x1 - d.x0)
+                    .append("title")
+                    .text(d => `${d.name}\n${d.value.toLocaleString()}`);
+
+                svg.append("g")
+                    .attr("fill", "none")
+                    .selectAll("g")
+                    .data(links)
+                    .join("path")
+                    .attr("d", d3.sankeyLinkHorizontal())
+                    .attr("stroke", d => color(d.names[0]))
+                    .attr("stroke-width", d => d.width)
+                    .style("mix-blend-mode", "multiply")
+                    .append("title")
+                    .text(d => `${d.names.join(" → ")}\n${d.value.toLocaleString()}`);
+
+                svg.append("g")
+                    .style("font", "12px sans-serif")
+                    .selectAll("text")
+                    .data(nodes)
+                    .join("text")
+                    .attr("x", d => d.x0 < width / 2 ? d.x1 + 6 : d.x0 - 6)
+                    .attr("y", d => (d.y1 + d.y0) / 2)
+                    .attr("dy", "0.35em")
+                    .attr("text-anchor", d => d.x0 < width / 2 ? "start" : "end")
+                    .text(d => d.name)
+                    .append("tspan")
+                    .attr("fill-opacity", 0.7)
+                    .text(d => ` ${d.value.toLocaleString()}`);
+
+                return svg.node();
+                });
+                main.variable(observer("width")).define("width", function() {
+                    return 975;
+                });
+                main.variable(observer("height")).define("height", function() {
+                    return 720;
+                });
+                main.variable(observer("sankey")).define("sankey", ["d3","width","height"], function(d3,width,height){
+                    return d3.sankey()
+                        .nodeSort(null)
+                        .linkSort(null)
+                        .nodeWidth(4)
+                        .nodePadding(20)
+                        .extent([[0, 5], [width, height - 5]])
+                });
+                main.variable(observer("graph")).define("graph", ["keys","data"], function(keys,data) {
+                    let index = -1;
+                    const nodes = [];
+                    const nodeByKey = new Map;
+                    const indexByKey = new Map;
+                    const links = [];
+
+                    for (const k of keys) {
+                        for (const d of data) {
+                        const key = JSON.stringify([k, d[k]]);
+                        if (nodeByKey.has(key)) continue;
+                        const node = {name: d[k]};
+                        nodes.push(node);
+                        nodeByKey.set(key, node);
+                        indexByKey.set(key, ++index);
+                        }
+                    }
+
+                    for (let i = 1; i < keys.length; ++i) {
+                        const a = keys[i - 1];
+                        const b = keys[i];
+                        const prefix = keys.slice(0, i + 1);
+                        const linkByKey = new Map;
+                        for (const d of data) {
+                        const names = prefix.map(k => d[k]);
+                        const key = JSON.stringify(names);
+                        const value = d.value || 1;
+                        let link = linkByKey.get(key);
+                        if (link) { link.value += value; continue; }
+                        link = {
+                            source: indexByKey.get(JSON.stringify([a, d[a]])),
+                            target: indexByKey.get(JSON.stringify([b, d[b]])),
+                            names,
+                            value
+                        };
+                        links.push(link);
+                        linkByKey.set(key, link);
+                        }
+                    }
+
+                    return {nodes, links};
+                });
+                main.variable(observer("color")).define("color", ["d3"], function(d3) {
+                    return d3.scaleOrdinal(["Perished"], ["#da4f81"]).unknown("#ccc");
+                });
+                main.variable(observer("keys")).define("keys", ["data"], function(data) {
+                    return data.columns.slice(0, -1);
+                });
+                main.variable(observer("data")).define("data", ["d3","FileAttachment"], async function(d3,FileAttachment) {
+                    return d3.csvParse(await FileAttachment("spending1.csv").text(), d3.autoType);
+                });
+                main.variable(observer("d3")).define("d3", ["require"], function(require) {
+                    return require("d3@5", "d3-sankey@0.12");
+                });
+                return main;
+            }
+            const inspect = Inspector.into("#spending-graph1");
+            (new Runtime).module(define, name => name === "chart" ? inspect() : undefined);
+        </script>
+        <script type="module">
+            import {Runtime, Inspector} from "https://cdn.jsdelivr.net/npm/@observablehq/runtime@4/dist/runtime.js";
+            // https://observablehq.com/@d3/parallel-sets@244
+            export default function define(runtime, observer) {
+                const main = runtime.module();
+                const fileAttachments = new Map([
+                    ["spending2.csv", "https://raw.githubusercontent.com/ChengJoyceJi/ChengJoyceJi.github.io/master/data/spending2.csv"],
+                ]);
+                main.builtin("FileAttachment", runtime.fileAttachments(name => fileAttachments.get(name)));
+                main.variable(observer()).define(["md"], function(md) {
+                    return(md`# Parallel Sets
+
+                    [Parallel sets](https://kosara.net/publications/Bendix_InfoVis_2005.html) are like [parallel coordinates](/@d3/parallel-coordinates), but for categorical dimensions.
+                    The thickness of each curved line represents a quantity that is repeatedly subdivided by category.`
+                )});
+                main.variable(observer("chart"))
+                    .define("chart", ["d3","width","height","sankey","graph","color"],
+                        function(d3,width,height,sankey,graph,color){
+                    const svg = d3.create("svg")
+                        .attr("viewBox", [0, 0, width, height]);
+
+                    const {nodes, links} = sankey({
+                        nodes: graph.nodes.map(d => Object.assign({}, d)),
+                        links: graph.links.map(d => Object.assign({}, d))
+                });
+
+                svg.append("g")
+                    .selectAll("rect")
+                    .data(nodes)
+                    .join("rect")
+                    .attr("x", d => d.x0)
+                    .attr("y", d => d.y0)
+                    .attr("height", d => d.y1 - d.y0)
+                    .attr("width", d => d.x1 - d.x0)
+                    .append("title")
+                    .text(d => `${d.name}\n${d.value.toLocaleString()}`);
+
+                svg.append("g")
+                    .attr("fill", "none")
+                    .selectAll("g")
+                    .data(links)
+                    .join("path")
+                    .attr("d", d3.sankeyLinkHorizontal())
+                    .attr("stroke", d => color(d.names[0]))
+                    .attr("stroke-width", d => d.width)
+                    .style("mix-blend-mode", "multiply")
+                    .append("title")
+                    .text(d => `${d.names.join(" → ")}\n${d.value.toLocaleString()}`);
+
+                svg.append("g")
+                    .style("font", "12px sans-serif")
+                    .selectAll("text")
+                    .data(nodes)
+                    .join("text")
+                    .attr("x", d => d.x0 < width / 2 ? d.x1 + 6 : d.x0 - 6)
+                    .attr("y", d => (d.y1 + d.y0) / 2)
+                    .attr("dy", "0.35em")
+                    .attr("text-anchor", d => d.x0 < width / 2 ? "start" : "end")
+                    .text(d => d.name)
+                    .append("tspan")
+                    .attr("fill-opacity", 0.7)
+                    .text(d => ` ${d.value.toLocaleString()}`);
+
+                return svg.node();
+                });
+                main.variable(observer("width")).define("width", function() {
+                    return 975;
+                });
+                main.variable(observer("height")).define("height", function() {
+                    return 720;
+                });
+                main.variable(observer("sankey")).define("sankey", ["d3","width","height"], function(d3,width,height){
+                    return d3.sankey()
+                        .nodeSort(null)
+                        .linkSort(null)
+                        .nodeWidth(4)
+                        .nodePadding(20)
+                        .extent([[0, 5], [width, height - 5]])
+                });
+                main.variable(observer("graph")).define("graph", ["keys","data"], function(keys,data) {
+                    let index = -1;
+                    const nodes = [];
+                    const nodeByKey = new Map;
+                    const indexByKey = new Map;
+                    const links = [];
+
+                    for (const k of keys) {
+                        for (const d of data) {
+                        const key = JSON.stringify([k, d[k]]);
+                        if (nodeByKey.has(key)) continue;
+                        const node = {name: d[k]};
+                        nodes.push(node);
+                        nodeByKey.set(key, node);
+                        indexByKey.set(key, ++index);
+                        }
+                    }
+
+                    for (let i = 1; i < keys.length; ++i) {
+                        const a = keys[i - 1];
+                        const b = keys[i];
+                        const prefix = keys.slice(0, i + 1);
+                        const linkByKey = new Map;
+                        for (const d of data) {
+                        const names = prefix.map(k => d[k]);
+                        const key = JSON.stringify(names);
+                        const value = d.value || 1;
+                        let link = linkByKey.get(key);
+                        if (link) { link.value += value; continue; }
+                        link = {
+                            source: indexByKey.get(JSON.stringify([a, d[a]])),
+                            target: indexByKey.get(JSON.stringify([b, d[b]])),
+                            names,
+                            value
+                        };
+                        links.push(link);
+                        linkByKey.set(key, link);
+                        }
+                    }
+
+                    return {nodes, links};
+                });
+                main.variable(observer("color")).define("color", ["d3"], function(d3) {
+                    return d3.scaleOrdinal(["Perished"], ["#da4f81"]).unknown("#ccc");
+                });
+                main.variable(observer("keys")).define("keys", ["data"], function(data) {
+                    return data.columns.slice(0, -1);
+                });
+                main.variable(observer("data")).define("data", ["d3","FileAttachment"], async function(d3,FileAttachment) {
+                    return d3.csvParse(await FileAttachment("spending2.csv").text(), d3.autoType);
+                });
+                main.variable(observer("d3")).define("d3", ["require"], function(require) {
+                    return require("d3@5", "d3-sankey@0.12");
+                });
+                return main;
+            }
+            const inspect = Inspector.into("#spending-graph2");
+            (new Runtime).module(define, name => name === "chart" ? inspect() : undefined);
+        </script>
+        <script type="module">
+            import {Runtime, Inspector} from "https://cdn.jsdelivr.net/npm/@observablehq/runtime@4/dist/runtime.js";
+            // https://observablehq.com/@d3/parallel-sets@244
+            export default function define(runtime, observer) {
+                const main = runtime.module();
+                const fileAttachments = new Map([
+                    ["spending3.csv", "https://raw.githubusercontent.com/ChengJoyceJi/ChengJoyceJi.github.io/master/data/spending3.csv"],
+                ]);
+                main.builtin("FileAttachment", runtime.fileAttachments(name => fileAttachments.get(name)));
+                main.variable(observer()).define(["md"], function(md) {
+                    return(md`# Parallel Sets
+
+                    [Parallel sets](https://kosara.net/publications/Bendix_InfoVis_2005.html) are like [parallel coordinates](/@d3/parallel-coordinates), but for categorical dimensions.
+                    The thickness of each curved line represents a quantity that is repeatedly subdivided by category.`
+                )});
+                main.variable(observer("chart"))
+                    .define("chart", ["d3","width","height","sankey","graph","color"],
+                        function(d3,width,height,sankey,graph,color){
+                    const svg = d3.create("svg")
+                        .attr("viewBox", [0, 0, width, height]);
+
+                    const {nodes, links} = sankey({
+                        nodes: graph.nodes.map(d => Object.assign({}, d)),
+                        links: graph.links.map(d => Object.assign({}, d))
+                });
+
+                svg.append("g")
+                    .selectAll("rect")
+                    .data(nodes)
+                    .join("rect")
+                    .attr("x", d => d.x0)
+                    .attr("y", d => d.y0)
+                    .attr("height", d => d.y1 - d.y0)
+                    .attr("width", d => d.x1 - d.x0)
+                    .append("title")
+                    .text(d => `${d.name}\n${d.value.toLocaleString()}`);
+
+                svg.append("g")
+                    .attr("fill", "none")
+                    .selectAll("g")
+                    .data(links)
+                    .join("path")
+                    .attr("d", d3.sankeyLinkHorizontal())
+                    .attr("stroke", d => color(d.names[0]))
+                    .attr("stroke-width", d => d.width)
+                    .style("mix-blend-mode", "multiply")
+                    .append("title")
+                    .text(d => `${d.names.join(" → ")}\n${d.value.toLocaleString()}`);
+
+                svg.append("g")
+                    .style("font", "12px sans-serif")
+                    .selectAll("text")
+                    .data(nodes)
+                    .join("text")
+                    .attr("x", d => d.x0 < width / 2 ? d.x1 + 6 : d.x0 - 6)
+                    .attr("y", d => (d.y1 + d.y0) / 2)
+                    .attr("dy", "0.35em")
+                    .attr("text-anchor", d => d.x0 < width / 2 ? "start" : "end")
+                    .text(d => d.name)
+                    .append("tspan")
+                    .attr("fill-opacity", 0.7)
+                    .text(d => ` ${d.value.toLocaleString()}`);
+
+                return svg.node();
+                });
+                main.variable(observer("width")).define("width", function() {
+                    return 975;
+                });
+                main.variable(observer("height")).define("height", function() {
+                    return 720;
+                });
+                main.variable(observer("sankey")).define("sankey", ["d3","width","height"], function(d3,width,height){
+                    return d3.sankey()
+                        .nodeSort(null)
+                        .linkSort(null)
+                        .nodeWidth(4)
+                        .nodePadding(20)
+                        .extent([[0, 5], [width, height - 5]])
+                });
+                main.variable(observer("graph")).define("graph", ["keys","data"], function(keys,data) {
+                    let index = -1;
+                    const nodes = [];
+                    const nodeByKey = new Map;
+                    const indexByKey = new Map;
+                    const links = [];
+
+                    for (const k of keys) {
+                        for (const d of data) {
+                        const key = JSON.stringify([k, d[k]]);
+                        if (nodeByKey.has(key)) continue;
+                        const node = {name: d[k]};
+                        nodes.push(node);
+                        nodeByKey.set(key, node);
+                        indexByKey.set(key, ++index);
+                        }
+                    }
+
+                    for (let i = 1; i < keys.length; ++i) {
+                        const a = keys[i - 1];
+                        const b = keys[i];
+                        const prefix = keys.slice(0, i + 1);
+                        const linkByKey = new Map;
+                        for (const d of data) {
+                        const names = prefix.map(k => d[k]);
+                        const key = JSON.stringify(names);
+                        const value = d.value || 1;
+                        let link = linkByKey.get(key);
+                        if (link) { link.value += value; continue; }
+                        link = {
+                            source: indexByKey.get(JSON.stringify([a, d[a]])),
+                            target: indexByKey.get(JSON.stringify([b, d[b]])),
+                            names,
+                            value
+                        };
+                        links.push(link);
+                        linkByKey.set(key, link);
+                        }
+                    }
+
+                    return {nodes, links};
+                });
+                main.variable(observer("color")).define("color", ["d3"], function(d3) {
+                    return d3.scaleOrdinal(["Perished"], ["#da4f81"]).unknown("#ccc");
+                });
+                main.variable(observer("keys")).define("keys", ["data"], function(data) {
+                    return data.columns.slice(0, -1);
+                });
+                main.variable(observer("data")).define("data", ["d3","FileAttachment"], async function(d3,FileAttachment) {
+                    return d3.csvParse(await FileAttachment("spending3.csv").text(), d3.autoType);
+                });
+                main.variable(observer("d3")).define("d3", ["require"], function(require) {
+                    return require("d3@5", "d3-sankey@0.12");
+                });
+                return main;
+            }
+            const inspect = Inspector.into("#spending-graph3");
+            (new Runtime).module(define, name => name === "chart" ? inspect() : undefined);
+        </script>
+        <script type="module">
+            import {Runtime, Inspector} from "https://cdn.jsdelivr.net/npm/@observablehq/runtime@4/dist/runtime.js";
+            // https://observablehq.com/@d3/parallel-sets@244
+            export default function define(runtime, observer) {
+                const main = runtime.module();
+                const fileAttachments = new Map([
+                    ["spending4.csv", "https://raw.githubusercontent.com/ChengJoyceJi/ChengJoyceJi.github.io/master/data/spending4.csv"],
+                ]);
+                main.builtin("FileAttachment", runtime.fileAttachments(name => fileAttachments.get(name)));
+                main.variable(observer()).define(["md"], function(md) {
+                    return(md`# Parallel Sets
+
+                    [Parallel sets](https://kosara.net/publications/Bendix_InfoVis_2005.html) are like [parallel coordinates](/@d3/parallel-coordinates), but for categorical dimensions.
+                    The thickness of each curved line represents a quantity that is repeatedly subdivided by category.`
+                )});
+                main.variable(observer("chart"))
+                    .define("chart", ["d3","width","height","sankey","graph","color"],
+                        function(d3,width,height,sankey,graph,color){
+                    const svg = d3.create("svg")
+                        .attr("viewBox", [0, 0, width, height]);
+
+                    const {nodes, links} = sankey({
+                        nodes: graph.nodes.map(d => Object.assign({}, d)),
+                        links: graph.links.map(d => Object.assign({}, d))
+                });
+
+                svg.append("g")
+                    .selectAll("rect")
+                    .data(nodes)
+                    .join("rect")
+                    .attr("x", d => d.x0)
+                    .attr("y", d => d.y0)
+                    .attr("height", d => d.y1 - d.y0)
+                    .attr("width", d => d.x1 - d.x0)
+                    .append("title")
+                    .text(d => `${d.name}\n${d.value.toLocaleString()}`);
+
+                svg.append("g")
+                    .attr("fill", "none")
+                    .selectAll("g")
+                    .data(links)
+                    .join("path")
+                    .attr("d", d3.sankeyLinkHorizontal())
+                    .attr("stroke", d => color(d.names[0]))
+                    .attr("stroke-width", d => d.width)
+                    .style("mix-blend-mode", "multiply")
+                    .append("title")
+                    .text(d => `${d.names.join(" → ")}\n${d.value.toLocaleString()}`);
+
+                svg.append("g")
+                    .style("font", "12px sans-serif")
+                    .selectAll("text")
+                    .data(nodes)
+                    .join("text")
+                    .attr("x", d => d.x0 < width / 2 ? d.x1 + 6 : d.x0 - 6)
+                    .attr("y", d => (d.y1 + d.y0) / 2)
+                    .attr("dy", "0.35em")
+                    .attr("text-anchor", d => d.x0 < width / 2 ? "start" : "end")
+                    .text(d => d.name)
+                    .append("tspan")
+                    .attr("fill-opacity", 0.7)
+                    .text(d => ` ${d.value.toLocaleString()}`);
+
+                return svg.node();
+                });
+                main.variable(observer("width")).define("width", function() {
+                    return 975;
+                });
+                main.variable(observer("height")).define("height", function() {
+                    return 720;
+                });
+                main.variable(observer("sankey")).define("sankey", ["d3","width","height"], function(d3,width,height){
+                    return d3.sankey()
+                        .nodeSort(null)
+                        .linkSort(null)
+                        .nodeWidth(4)
+                        .nodePadding(20)
+                        .extent([[0, 5], [width, height - 5]])
+                });
+                main.variable(observer("graph")).define("graph", ["keys","data"], function(keys,data) {
+                    let index = -1;
+                    const nodes = [];
+                    const nodeByKey = new Map;
+                    const indexByKey = new Map;
+                    const links = [];
+
+                    for (const k of keys) {
+                        for (const d of data) {
+                        const key = JSON.stringify([k, d[k]]);
+                        if (nodeByKey.has(key)) continue;
+                        const node = {name: d[k]};
+                        nodes.push(node);
+                        nodeByKey.set(key, node);
+                        indexByKey.set(key, ++index);
+                        }
+                    }
+
+                    for (let i = 1; i < keys.length; ++i) {
+                        const a = keys[i - 1];
+                        const b = keys[i];
+                        const prefix = keys.slice(0, i + 1);
+                        const linkByKey = new Map;
+                        for (const d of data) {
+                        const names = prefix.map(k => d[k]);
+                        const key = JSON.stringify(names);
+                        const value = d.value || 1;
+                        let link = linkByKey.get(key);
+                        if (link) { link.value += value; continue; }
+                        link = {
+                            source: indexByKey.get(JSON.stringify([a, d[a]])),
+                            target: indexByKey.get(JSON.stringify([b, d[b]])),
+                            names,
+                            value
+                        };
+                        links.push(link);
+                        linkByKey.set(key, link);
+                        }
+                    }
+
+                    return {nodes, links};
+                });
+                main.variable(observer("color")).define("color", ["d3"], function(d3) {
+                    return d3.scaleOrdinal(["Perished"], ["#da4f81"]).unknown("#ccc");
+                });
+                main.variable(observer("keys")).define("keys", ["data"], function(data) {
+                    return data.columns.slice(0, -1);
+                });
+                main.variable(observer("data")).define("data", ["d3","FileAttachment"], async function(d3,FileAttachment) {
+                    return d3.csvParse(await FileAttachment("spending4.csv").text(), d3.autoType);
+                });
+                main.variable(observer("d3")).define("d3", ["require"], function(require) {
+                    return require("d3@5", "d3-sankey@0.12");
+                });
+                return main;
+            }
+            const inspect = Inspector.into("#spending-graph4");
+            (new Runtime).module(define, name => name === "chart" ? inspect() : undefined);
+        </script>
+        <script type="module">
+            import {Runtime, Inspector} from "https://cdn.jsdelivr.net/npm/@observablehq/runtime@4/dist/runtime.js";
+            // https://observablehq.com/@d3/parallel-sets@244
+            export default function define(runtime, observer) {
+                const main = runtime.module();
+                const fileAttachments = new Map([
+                    ["spending5.csv", "https://raw.githubusercontent.com/ChengJoyceJi/ChengJoyceJi.github.io/master/data/spending5.csv"],
+                ]);
+                main.builtin("FileAttachment", runtime.fileAttachments(name => fileAttachments.get(name)));
+                main.variable(observer()).define(["md"], function(md) {
+                    return(md`# Parallel Sets
+
+                    [Parallel sets](https://kosara.net/publications/Bendix_InfoVis_2005.html) are like [parallel coordinates](/@d3/parallel-coordinates), but for categorical dimensions.
+                    The thickness of each curved line represents a quantity that is repeatedly subdivided by category.`
+                )});
+                main.variable(observer("chart"))
+                    .define("chart", ["d3","width","height","sankey","graph","color"],
+                        function(d3,width,height,sankey,graph,color){
+                    const svg = d3.create("svg")
+                        .attr("viewBox", [0, 0, width, height]);
+
+                    const {nodes, links} = sankey({
+                        nodes: graph.nodes.map(d => Object.assign({}, d)),
+                        links: graph.links.map(d => Object.assign({}, d))
+                });
+
+                svg.append("g")
+                    .selectAll("rect")
+                    .data(nodes)
+                    .join("rect")
+                    .attr("x", d => d.x0)
+                    .attr("y", d => d.y0)
+                    .attr("height", d => d.y1 - d.y0)
+                    .attr("width", d => d.x1 - d.x0)
+                    .append("title")
+                    .text(d => `${d.name}\n${d.value.toLocaleString()}`);
+
+                svg.append("g")
+                    .attr("fill", "none")
+                    .selectAll("g")
+                    .data(links)
+                    .join("path")
+                    .attr("d", d3.sankeyLinkHorizontal())
+                    .attr("stroke", d => color(d.names[0]))
+                    .attr("stroke-width", d => d.width)
+                    .style("mix-blend-mode", "multiply")
+                    .append("title")
+                    .text(d => `${d.names.join(" → ")}\n${d.value.toLocaleString()}`);
+
+                svg.append("g")
+                    .style("font", "12px sans-serif")
+                    .selectAll("text")
+                    .data(nodes)
+                    .join("text")
+                    .attr("x", d => d.x0 < width / 2 ? d.x1 + 6 : d.x0 - 6)
+                    .attr("y", d => (d.y1 + d.y0) / 2)
+                    .attr("dy", "0.35em")
+                    .attr("text-anchor", d => d.x0 < width / 2 ? "start" : "end")
+                    .text(d => d.name)
+                    .append("tspan")
+                    .attr("fill-opacity", 0.7)
+                    .text(d => ` ${d.value.toLocaleString()}`);
+
+                return svg.node();
+                });
+                main.variable(observer("width")).define("width", function() {
+                    return 975;
+                });
+                main.variable(observer("height")).define("height", function() {
+                    return 720;
+                });
+                main.variable(observer("sankey")).define("sankey", ["d3","width","height"], function(d3,width,height){
+                    return d3.sankey()
+                        .nodeSort(null)
+                        .linkSort(null)
+                        .nodeWidth(4)
+                        .nodePadding(20)
+                        .extent([[0, 5], [width, height - 5]])
+                });
+                main.variable(observer("graph")).define("graph", ["keys","data"], function(keys,data) {
+                    let index = -1;
+                    const nodes = [];
+                    const nodeByKey = new Map;
+                    const indexByKey = new Map;
+                    const links = [];
+
+                    for (const k of keys) {
+                        for (const d of data) {
+                        const key = JSON.stringify([k, d[k]]);
+                        if (nodeByKey.has(key)) continue;
+                        const node = {name: d[k]};
+                        nodes.push(node);
+                        nodeByKey.set(key, node);
+                        indexByKey.set(key, ++index);
+                        }
+                    }
+
+                    for (let i = 1; i < keys.length; ++i) {
+                        const a = keys[i - 1];
+                        const b = keys[i];
+                        const prefix = keys.slice(0, i + 1);
+                        const linkByKey = new Map;
+                        for (const d of data) {
+                        const names = prefix.map(k => d[k]);
+                        const key = JSON.stringify(names);
+                        const value = d.value || 1;
+                        let link = linkByKey.get(key);
+                        if (link) { link.value += value; continue; }
+                        link = {
+                            source: indexByKey.get(JSON.stringify([a, d[a]])),
+                            target: indexByKey.get(JSON.stringify([b, d[b]])),
+                            names,
+                            value
+                        };
+                        links.push(link);
+                        linkByKey.set(key, link);
+                        }
+                    }
+
+                    return {nodes, links};
+                });
+                main.variable(observer("color")).define("color", ["d3"], function(d3) {
+                    return d3.scaleOrdinal(["Perished"], ["#da4f81"]).unknown("#ccc");
+                });
+                main.variable(observer("keys")).define("keys", ["data"], function(data) {
+                    return data.columns.slice(0, -1);
+                });
+                main.variable(observer("data")).define("data", ["d3","FileAttachment"], async function(d3,FileAttachment) {
+                    return d3.csvParse(await FileAttachment("spending5.csv").text(), d3.autoType);
+                });
+                main.variable(observer("d3")).define("d3", ["require"], function(require) {
+                    return require("d3@5", "d3-sankey@0.12");
+                });
+                return main;
+            }
+            const inspect = Inspector.into("#spending-graph5");
+            (new Runtime).module(define, name => name === "chart" ? inspect() : undefined);
+        </script>
+        <script type="module">
+            import {Runtime, Inspector} from "https://cdn.jsdelivr.net/npm/@observablehq/runtime@4/dist/runtime.js";
+            // https://observablehq.com/@d3/parallel-sets@244
+            export default function define(runtime, observer) {
+                const main = runtime.module();
+                const fileAttachments = new Map([
+                    ["spending6.csv", "https://raw.githubusercontent.com/ChengJoyceJi/ChengJoyceJi.github.io/master/data/spending6.csv"],
+                ]);
+                main.builtin("FileAttachment", runtime.fileAttachments(name => fileAttachments.get(name)));
+                main.variable(observer()).define(["md"], function(md) {
+                    return(md`# Parallel Sets
+
+                    [Parallel sets](https://kosara.net/publications/Bendix_InfoVis_2005.html) are like [parallel coordinates](/@d3/parallel-coordinates), but for categorical dimensions.
+                    The thickness of each curved line represents a quantity that is repeatedly subdivided by category.`
+                )});
+                main.variable(observer("chart"))
+                    .define("chart", ["d3","width","height","sankey","graph","color"],
+                        function(d3,width,height,sankey,graph,color){
+                    const svg = d3.create("svg")
+                        .attr("viewBox", [0, 0, width, height]);
+
+                    const {nodes, links} = sankey({
+                        nodes: graph.nodes.map(d => Object.assign({}, d)),
+                        links: graph.links.map(d => Object.assign({}, d))
+                });
+
+                svg.append("g")
+                    .selectAll("rect")
+                    .data(nodes)
+                    .join("rect")
+                    .attr("x", d => d.x0)
+                    .attr("y", d => d.y0)
+                    .attr("height", d => d.y1 - d.y0)
+                    .attr("width", d => d.x1 - d.x0)
+                    .append("title")
+                    .text(d => `${d.name}\n${d.value.toLocaleString()}`);
+
+                svg.append("g")
+                    .attr("fill", "none")
+                    .selectAll("g")
+                    .data(links)
+                    .join("path")
+                    .attr("d", d3.sankeyLinkHorizontal())
+                    .attr("stroke", d => color(d.names[0]))
+                    .attr("stroke-width", d => d.width)
+                    .style("mix-blend-mode", "multiply")
+                    .append("title")
+                    .text(d => `${d.names.join(" → ")}\n${d.value.toLocaleString()}`);
+
+                svg.append("g")
+                    .style("font", "12px sans-serif")
+                    .selectAll("text")
+                    .data(nodes)
+                    .join("text")
+                    .attr("x", d => d.x0 < width / 2 ? d.x1 + 6 : d.x0 - 6)
+                    .attr("y", d => (d.y1 + d.y0) / 2)
+                    .attr("dy", "0.35em")
+                    .attr("text-anchor", d => d.x0 < width / 2 ? "start" : "end")
+                    .text(d => d.name)
+                    .append("tspan")
+                    .attr("fill-opacity", 0.7)
+                    .text(d => ` ${d.value.toLocaleString()}`);
+
+                return svg.node();
+                });
+                main.variable(observer("width")).define("width", function() {
+                    return 975;
+                });
+                main.variable(observer("height")).define("height", function() {
+                    return 720;
+                });
+                main.variable(observer("sankey")).define("sankey", ["d3","width","height"], function(d3,width,height){
+                    return d3.sankey()
+                        .nodeSort(null)
+                        .linkSort(null)
+                        .nodeWidth(4)
+                        .nodePadding(20)
+                        .extent([[0, 5], [width, height - 5]])
+                });
+                main.variable(observer("graph")).define("graph", ["keys","data"], function(keys,data) {
+                    let index = -1;
+                    const nodes = [];
+                    const nodeByKey = new Map;
+                    const indexByKey = new Map;
+                    const links = [];
+
+                    for (const k of keys) {
+                        for (const d of data) {
+                        const key = JSON.stringify([k, d[k]]);
+                        if (nodeByKey.has(key)) continue;
+                        const node = {name: d[k]};
+                        nodes.push(node);
+                        nodeByKey.set(key, node);
+                        indexByKey.set(key, ++index);
+                        }
+                    }
+
+                    for (let i = 1; i < keys.length; ++i) {
+                        const a = keys[i - 1];
+                        const b = keys[i];
+                        const prefix = keys.slice(0, i + 1);
+                        const linkByKey = new Map;
+                        for (const d of data) {
+                        const names = prefix.map(k => d[k]);
+                        const key = JSON.stringify(names);
+                        const value = d.value || 1;
+                        let link = linkByKey.get(key);
+                        if (link) { link.value += value; continue; }
+                        link = {
+                            source: indexByKey.get(JSON.stringify([a, d[a]])),
+                            target: indexByKey.get(JSON.stringify([b, d[b]])),
+                            names,
+                            value
+                        };
+                        links.push(link);
+                        linkByKey.set(key, link);
+                        }
+                    }
+
+                    return {nodes, links};
+                });
+                main.variable(observer("color")).define("color", ["d3"], function(d3) {
+                    return d3.scaleOrdinal(["Perished"], ["#da4f81"]).unknown("#ccc");
+                });
+                main.variable(observer("keys")).define("keys", ["data"], function(data) {
+                    return data.columns.slice(0, -1);
+                });
+                main.variable(observer("data")).define("data", ["d3","FileAttachment"], async function(d3,FileAttachment) {
+                    return d3.csvParse(await FileAttachment("spending6.csv").text(), d3.autoType);
+                });
+                main.variable(observer("d3")).define("d3", ["require"], function(require) {
+                    return require("d3@5", "d3-sankey@0.12");
+                });
+                return main;
+            }
+            const inspect = Inspector.into("#spending-graph6");
+            (new Runtime).module(define, name => name === "chart" ? inspect() : undefined);
+        </script>
+        <script type="module">
+            import {Runtime, Inspector} from "https://cdn.jsdelivr.net/npm/@observablehq/runtime@4/dist/runtime.js";
+            // https://observablehq.com/@d3/parallel-sets@244
+            export default function define(runtime, observer) {
+                const main = runtime.module();
+                const fileAttachments = new Map([
+                    ["spending7.csv", "https://raw.githubusercontent.com/ChengJoyceJi/ChengJoyceJi.github.io/master/data/spending7.csv"],
+                ]);
+                main.builtin("FileAttachment", runtime.fileAttachments(name => fileAttachments.get(name)));
+                main.variable(observer()).define(["md"], function(md) {
+                    return(md`# Parallel Sets
+
+                    [Parallel sets](https://kosara.net/publications/Bendix_InfoVis_2005.html) are like [parallel coordinates](/@d3/parallel-coordinates), but for categorical dimensions.
+                    The thickness of each curved line represents a quantity that is repeatedly subdivided by category.`
+                )});
+                main.variable(observer("chart"))
+                    .define("chart", ["d3","width","height","sankey","graph","color"],
+                        function(d3,width,height,sankey,graph,color){
+                    const svg = d3.create("svg")
+                        .attr("viewBox", [0, 0, width, height]);
+
+                    const {nodes, links} = sankey({
+                        nodes: graph.nodes.map(d => Object.assign({}, d)),
+                        links: graph.links.map(d => Object.assign({}, d))
+                });
+
+                svg.append("g")
+                    .selectAll("rect")
+                    .data(nodes)
+                    .join("rect")
+                    .attr("x", d => d.x0)
+                    .attr("y", d => d.y0)
+                    .attr("height", d => d.y1 - d.y0)
+                    .attr("width", d => d.x1 - d.x0)
+                    .append("title")
+                    .text(d => `${d.name}\n${d.value.toLocaleString()}`);
+
+                svg.append("g")
+                    .attr("fill", "none")
+                    .selectAll("g")
+                    .data(links)
+                    .join("path")
+                    .attr("d", d3.sankeyLinkHorizontal())
+                    .attr("stroke", d => color(d.names[0]))
+                    .attr("stroke-width", d => d.width)
+                    .style("mix-blend-mode", "multiply")
+                    .append("title")
+                    .text(d => `${d.names.join(" → ")}\n${d.value.toLocaleString()}`);
+
+                svg.append("g")
+                    .style("font", "12px sans-serif")
+                    .selectAll("text")
+                    .data(nodes)
+                    .join("text")
+                    .attr("x", d => d.x0 < width / 2 ? d.x1 + 6 : d.x0 - 6)
+                    .attr("y", d => (d.y1 + d.y0) / 2)
+                    .attr("dy", "0.35em")
+                    .attr("text-anchor", d => d.x0 < width / 2 ? "start" : "end")
+                    .text(d => d.name)
+                    .append("tspan")
+                    .attr("fill-opacity", 0.7)
+                    .text(d => ` ${d.value.toLocaleString()}`);
+
+                return svg.node();
+                });
+                main.variable(observer("width")).define("width", function() {
+                    return 975;
+                });
+                main.variable(observer("height")).define("height", function() {
+                    return 720;
+                });
+                main.variable(observer("sankey")).define("sankey", ["d3","width","height"], function(d3,width,height){
+                    return d3.sankey()
+                        .nodeSort(null)
+                        .linkSort(null)
+                        .nodeWidth(4)
+                        .nodePadding(20)
+                        .extent([[0, 5], [width, height - 5]])
+                });
+                main.variable(observer("graph")).define("graph", ["keys","data"], function(keys,data) {
+                    let index = -1;
+                    const nodes = [];
+                    const nodeByKey = new Map;
+                    const indexByKey = new Map;
+                    const links = [];
+
+                    for (const k of keys) {
+                        for (const d of data) {
+                        const key = JSON.stringify([k, d[k]]);
+                        if (nodeByKey.has(key)) continue;
+                        const node = {name: d[k]};
+                        nodes.push(node);
+                        nodeByKey.set(key, node);
+                        indexByKey.set(key, ++index);
+                        }
+                    }
+
+                    for (let i = 1; i < keys.length; ++i) {
+                        const a = keys[i - 1];
+                        const b = keys[i];
+                        const prefix = keys.slice(0, i + 1);
+                        const linkByKey = new Map;
+                        for (const d of data) {
+                        const names = prefix.map(k => d[k]);
+                        const key = JSON.stringify(names);
+                        const value = d.value || 1;
+                        let link = linkByKey.get(key);
+                        if (link) { link.value += value; continue; }
+                        link = {
+                            source: indexByKey.get(JSON.stringify([a, d[a]])),
+                            target: indexByKey.get(JSON.stringify([b, d[b]])),
+                            names,
+                            value
+                        };
+                        links.push(link);
+                        linkByKey.set(key, link);
+                        }
+                    }
+
+                    return {nodes, links};
+                });
+                main.variable(observer("color")).define("color", ["d3"], function(d3) {
+                    return d3.scaleOrdinal(["Perished"], ["#da4f81"]).unknown("#ccc");
+                });
+                main.variable(observer("keys")).define("keys", ["data"], function(data) {
+                    return data.columns.slice(0, -1);
+                });
+                main.variable(observer("data")).define("data", ["d3","FileAttachment"], async function(d3,FileAttachment) {
+                    return d3.csvParse(await FileAttachment("spending7.csv").text(), d3.autoType);
+                });
+                main.variable(observer("d3")).define("d3", ["require"], function(require) {
+                    return require("d3@5", "d3-sankey@0.12");
+                });
+                return main;
+            }
+            const inspect = Inspector.into("#spending-graph7");
+            (new Runtime).module(define, name => name === "chart" ? inspect() : undefined);
+        </script>
+        <script type="module">
+            import {Runtime, Inspector} from "https://cdn.jsdelivr.net/npm/@observablehq/runtime@4/dist/runtime.js";
+            // https://observablehq.com/@d3/parallel-sets@244
+            export default function define(runtime, observer) {
+                const main = runtime.module();
+                const fileAttachments = new Map([
+                    ["spending8.csv", "https://raw.githubusercontent.com/ChengJoyceJi/ChengJoyceJi.github.io/master/data/spending8.csv"],
+                ]);
+                main.builtin("FileAttachment", runtime.fileAttachments(name => fileAttachments.get(name)));
+                main.variable(observer()).define(["md"], function(md) {
+                    return(md`# Parallel Sets
+
+                    [Parallel sets](https://kosara.net/publications/Bendix_InfoVis_2005.html) are like [parallel coordinates](/@d3/parallel-coordinates), but for categorical dimensions.
+                    The thickness of each curved line represents a quantity that is repeatedly subdivided by category.`
+                )});
+                main.variable(observer("chart"))
+                    .define("chart", ["d3","width","height","sankey","graph","color"],
+                        function(d3,width,height,sankey,graph,color){
+                    const svg = d3.create("svg")
+                        .attr("viewBox", [0, 0, width, height]);
+
+                    const {nodes, links} = sankey({
+                        nodes: graph.nodes.map(d => Object.assign({}, d)),
+                        links: graph.links.map(d => Object.assign({}, d))
+                });
+
+                svg.append("g")
+                    .selectAll("rect")
+                    .data(nodes)
+                    .join("rect")
+                    .attr("x", d => d.x0)
+                    .attr("y", d => d.y0)
+                    .attr("height", d => d.y1 - d.y0)
+                    .attr("width", d => d.x1 - d.x0)
+                    .append("title")
+                    .text(d => `${d.name}\n${d.value.toLocaleString()}`);
+
+                svg.append("g")
+                    .attr("fill", "none")
+                    .selectAll("g")
+                    .data(links)
+                    .join("path")
+                    .attr("d", d3.sankeyLinkHorizontal())
+                    .attr("stroke", d => color(d.names[0]))
+                    .attr("stroke-width", d => d.width)
+                    .style("mix-blend-mode", "multiply")
+                    .append("title")
+                    .text(d => `${d.names.join(" → ")}\n${d.value.toLocaleString()}`);
+
+                svg.append("g")
+                    .style("font", "12px sans-serif")
+                    .selectAll("text")
+                    .data(nodes)
+                    .join("text")
+                    .attr("x", d => d.x0 < width / 2 ? d.x1 + 6 : d.x0 - 6)
+                    .attr("y", d => (d.y1 + d.y0) / 2)
+                    .attr("dy", "0.35em")
+                    .attr("text-anchor", d => d.x0 < width / 2 ? "start" : "end")
+                    .text(d => d.name)
+                    .append("tspan")
+                    .attr("fill-opacity", 0.7)
+                    .text(d => ` ${d.value.toLocaleString()}`);
+
+                return svg.node();
+                });
+                main.variable(observer("width")).define("width", function() {
+                    return 975;
+                });
+                main.variable(observer("height")).define("height", function() {
+                    return 720;
+                });
+                main.variable(observer("sankey")).define("sankey", ["d3","width","height"], function(d3,width,height){
+                    return d3.sankey()
+                        .nodeSort(null)
+                        .linkSort(null)
+                        .nodeWidth(4)
+                        .nodePadding(20)
+                        .extent([[0, 5], [width, height - 5]])
+                });
+                main.variable(observer("graph")).define("graph", ["keys","data"], function(keys,data) {
+                    let index = -1;
+                    const nodes = [];
+                    const nodeByKey = new Map;
+                    const indexByKey = new Map;
+                    const links = [];
+
+                    for (const k of keys) {
+                        for (const d of data) {
+                        const key = JSON.stringify([k, d[k]]);
+                        if (nodeByKey.has(key)) continue;
+                        const node = {name: d[k]};
+                        nodes.push(node);
+                        nodeByKey.set(key, node);
+                        indexByKey.set(key, ++index);
+                        }
+                    }
+
+                    for (let i = 1; i < keys.length; ++i) {
+                        const a = keys[i - 1];
+                        const b = keys[i];
+                        const prefix = keys.slice(0, i + 1);
+                        const linkByKey = new Map;
+                        for (const d of data) {
+                        const names = prefix.map(k => d[k]);
+                        const key = JSON.stringify(names);
+                        const value = d.value || 1;
+                        let link = linkByKey.get(key);
+                        if (link) { link.value += value; continue; }
+                        link = {
+                            source: indexByKey.get(JSON.stringify([a, d[a]])),
+                            target: indexByKey.get(JSON.stringify([b, d[b]])),
+                            names,
+                            value
+                        };
+                        links.push(link);
+                        linkByKey.set(key, link);
+                        }
+                    }
+
+                    return {nodes, links};
+                });
+                main.variable(observer("color")).define("color", ["d3"], function(d3) {
+                    return d3.scaleOrdinal(["Perished"], ["#da4f81"]).unknown("#ccc");
+                });
+                main.variable(observer("keys")).define("keys", ["data"], function(data) {
+                    return data.columns.slice(0, -1);
+                });
+                main.variable(observer("data")).define("data", ["d3","FileAttachment"], async function(d3,FileAttachment) {
+                    return d3.csvParse(await FileAttachment("spending8.csv").text(), d3.autoType);
+                });
+                main.variable(observer("d3")).define("d3", ["require"], function(require) {
+                    return require("d3@5", "d3-sankey@0.12");
+                });
+                return main;
+            }
+            const inspect = Inspector.into("#spending-graph8");
+            (new Runtime).module(define, name => name === "chart" ? inspect() : undefined);
+        </script>
+    </body>
+</html>
